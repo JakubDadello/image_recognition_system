@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+data/kaggle_data/**
+data/dataset.zip
+!data/.gitkeep
+src/*.h5
+
