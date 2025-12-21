@@ -7,10 +7,10 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 from tensorflow import keras
 from keras import models, layers, optimizers
-from src.prepare_raw_data import X,Y
-from src.prepare_dataset import data_preprocessing
+from prepare_raw_data import X,Y
+from prepare_dataset import data_preprocessing
 
-model_path = "model_CNN.h5"
+model_path = os.path.join("results", "model_CNN.h5")
 
 
 class ResidualBlock(keras.layers.Layer):
