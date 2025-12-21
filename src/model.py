@@ -83,7 +83,6 @@ class ResidualBlock(keras.layers.Layer):
 
         # Element-wise addition of main path and skip connection
         return self.activation(x + skip)
-
    
 # =========================
 # MODEL LOADING OR TRAINING
