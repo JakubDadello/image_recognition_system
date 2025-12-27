@@ -9,16 +9,10 @@ from tensorflow import keras
 from keras import models, layers, optimizers
 from prepare_raw_data import X,Y
 from prepare_dataset import data_preprocessing
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
+model_path = "model_CNN.h5"
 
-# =========================
-# DEFINE RESULTS FOLDER
-# =========================
-results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
-os.makedirs(results_dir, exist_ok=True)  # create folder if it doesn't exist
-
-# full path to the model
-model_path = os.path.join(results_dir, "model_CNN.h5")
 
 class ResidualBlock(keras.layers.Layer):
     """
@@ -83,6 +77,7 @@ class ResidualBlock(keras.layers.Layer):
 
         # Element-wise addition of main path and skip connection
         return self.activation(x + skip)
+
    
 # =========================
 # MODEL LOADING OR TRAINING
@@ -104,6 +99,16 @@ else:
 
     X_val, Y_val = val_data
     X_test, Y_test = test_data
+
+    val_data_gen = ImageDataGenerator()  
+
+    val_generator = val_data_gen.flow(
+        X_val,
+        Y_val,
+        batch_size=32,
+        shuffle=False
+    )
+
 
     optimizer = keras.optimizers.Adam(learning_rate=0.001)
 
@@ -167,7 +172,7 @@ else:
     history = model.fit(
         train_generator,
         epochs=10,
-        validation_data=(X_val, Y_val)
+        validation_data=val_generator 
     )
 
     # =========================
@@ -182,19 +187,23 @@ else:
     # =========================
     # LEARNING CURVES
     # =========================
-    plt.plot(history.history["accuracy"], label="Training")
-    plt.plot(history.history["val_accuracy"], label="Validation")
-    plt.xlabel("Epochs")
-    plt.ylabel("Accuracy")
-    plt.title("Learning Curve – Custom ResNet")
-    plt.legend()
-    plt.grid(True)
+    fig, ax1 = plt.subplots()
+
+    color = 'tab:blue'
+    ax1.set_xlabel('Epoch')
+    ax1.set_ylabel('Accuracy', color=color)
+    ax1.plot(history.history["accuracy"], label="Train Acc", color='tab:blue')
+    ax1.plot(history.history["val_accuracy"], label="Val Acc", color='tab:cyan')
+    ax1.tick_params(axis='y', labelcolor=color)
+
+    ax2 = ax1.twinx()  
+    color = 'tab:red'
+    ax2.set_ylabel('Loss', color=color)
+    ax2.plot(history.history["loss"], label="Train Loss", color='tab:red')
+    ax2.plot(history.history["val_loss"], label="Val Loss", color='tab:orange')
+    ax2.tick_params(axis='y', labelcolor=color)
+
+    fig.tight_layout()
+    plt.title("Learning Curve – ResNet50 Baseline")
+    fig.legend(loc="upper right", bbox_to_anchor=(1,1), bbox_transform=ax1.transAxes)
     plt.show()
-
-
-
-
-
-
-
-
