@@ -17,9 +17,7 @@ Data preprocessing includes resizing, normalization, and augmentation to enhance
 
 - Language: Python 3.13.1
 - Libraries: Scikit-learn, Pandas, NumPy, Matplotlib, TensorFlow (MLP)
-- Tools: Power BI, SQL (Data Extraction), Canva (Presentation)
-
-For the full CRISP-DM methodology, see [CRISP-DM.md](CRISP-DM.md)
+- Tools: Canva (Presentation)
 
 
 ## Models 
