@@ -57,5 +57,5 @@ This project evaluates and compares two distinct architectural strategies for in
 
 This dual-model approach highlights the trade-off between **domain-specific training from scratch** and the **efficiency of transfer learning** in a specialized industrial context.
 
-For the full CRISP-DM methodology, see CRISP-DM.md
+For the full CRISP-DM methodology, see [CRISP-DM.md](CRISP-DM.md)
 
