@@ -13,7 +13,7 @@ Efficiency: Reduce the workload on human inspectors by filtering out clear cases
 
 Scalability: Create a model that can be deployed on edge devices near the production line for real-time inference.
 
-### Data Understanding
+# Data Understanding
 Dataset: NEU Surface Defect Database.
 
 The dataset contains 1,800 grayscale images categorized into six distinct types of surface defects. Each class represents a specific metallurgical or production-related issue.
