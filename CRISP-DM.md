@@ -5,7 +5,7 @@ Goal: Automated Quality Control in Steel Manufacturing.
 In traditional steel manufacturing, surface defect inspection is often performed manually by human operators. This process is prone to errors due to fatigue, subjective judgment, and the high speed of production lines.
 The objective of this project is to develop a Deep Learning solution based on the ResNet architecture to automatically classify surface defects in hot-rolled steel strips.
 
-## Key Objectives:
+### Key Objectives:
 
 Accuracy: Achieve high classification precision to minimize "false passes" of defective material.
 
