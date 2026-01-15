@@ -1,6 +1,4 @@
-import sys
 import os
-sys.path.append(os.path.abspath(".."))
 
 import numpy as np
 import tensorflow as tf
@@ -8,7 +6,7 @@ import matplotlib.pyplot as plt
 from tensorflow import keras
 import logging
 
-from src.data_pipeline import DataPipeline
+from data_pipeline import DataPipeline
 
 # ------------------------------------------------------------
 # Logging configuration
