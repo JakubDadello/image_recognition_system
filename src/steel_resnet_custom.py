@@ -1,16 +1,48 @@
+import sys
+import os
+sys.path.append(os.path.abspath(".."))
+
 import numpy as np
-import pandas as pd
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from tensorflow import keras
-from keras import models, layers, optimizers
-from prepare_raw_data import X,Y
-from prepare_dataset import data_preprocessing
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+import logging
 
-model_path = "model_CNN.h5"
+from src.data_pipeline import DataPipeline
+
+# ============================================================
+# Logging configuration
+# ============================================================
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+# ============================================================
+# Reproducibility (Seed)
+# ============================================================
+SEED = 42
+tf.random.set_seed(SEED)
+np.random.seed(SEED)
+
+# ============================================================
+# Configuration
+# ============================================================
+MODEL_PATH = "models/steel_resnet_custom.h5"
+BEST_MODEL_PATH = "models/steel_resnet_best.h5"
+
+ZIP_PATH = "data/dataset.zip"
+EXTRACT_PATH = "data/steel_data"
+
+IMG_SIZE = (200, 200)
+BATCH_SIZE = 32
+EPOCHS = 20
+NUM_CLASSES = 6
 
 
+# ============================================================
+# Residual Block
+# ============================================================
 class ResidualBlock(keras.layers.Layer):
     """
     Custom residual block implementing skip connections as used in ResNet architectures.
@@ -24,183 +56,171 @@ class ResidualBlock(keras.layers.Layer):
         # Main convolutional path
         self.main_layers = keras.Sequential([
             keras.layers.Conv2D(
-                filters,
-                kernel_size=3,
-                strides=strides,
-                padding="same",
-                use_bias=False
+                filters, kernel_size=3, strides=strides,
+                padding="same", use_bias=False
             ),
             keras.layers.BatchNormalization(),
             keras.layers.Activation(activation),
             keras.layers.Conv2D(
-                filters,
-                kernel_size=3,
-                strides=1,
-                padding="same",
-                use_bias=False
+                filters, kernel_size=3, strides=1,
+                padding="same", use_bias=False
             ),
             keras.layers.BatchNormalization()
         ])
 
-        # Skip connection
-        # Projection shortcut is used when spatial dimensions change
+        # Skip connection (projection shortcut if dimensions change)
         if strides > 1:
             self.skip_layers = keras.Sequential([
                 keras.layers.Conv2D(
-                    filters,
-                    kernel_size=1,
-                    strides=strides,
-                    padding="same",
-                    use_bias=False
+                    filters, kernel_size=1, strides=strides,
+                    padding="same", use_bias=False
                 ),
                 keras.layers.BatchNormalization()
             ])
         else:
-            # Identity mapping
             self.skip_layers = keras.layers.Activation("linear")
 
     def call(self, inputs):
-        """
-        Forward pass for the residual block.
-
-        Args:
-            inputs (Tensor): Input tensor.
-
-        Returns:
-            Tensor: Output tensor after applying residual connection.
-        """
         x = self.main_layers(inputs)
         skip = self.skip_layers(inputs)
-
-        # Element-wise addition of main path and skip connection
         return self.activation(x + skip)
 
-   
-# =========================
-# MODEL LOADING OR TRAINING
-# =========================
 
-if os.path.exists(model_path):
-    # Load previously trained model with custom residual blocks
-    model = keras.models.load_model(
-        model_path,
-        custom_objects={"ResidualBlock": ResidualBlock}
-    )
-    print("Model loaded successfully")
+# ============================================================
+# Custom ResNet Builder
+# ============================================================
+def build_custom_resnet(input_shape, num_classes):
+    """
+    Builds a ResNet-34 style architecture using the custom ResidualBlock.
+    """
+    inputs = keras.Input(shape=input_shape)
 
-else:
-    # =========================
-    # DATA PREPARATION
-    # =========================
-    train_generator, val_data, test_data = data_preprocessing(X, Y)
+    # Stem
+    x = keras.layers.Conv2D(
+        64, kernel_size=7, strides=2, padding="same", use_bias=False
+    )(inputs)
+    x = keras.layers.BatchNormalization()(x)
+    x = keras.layers.Activation("relu")(x)
+    x = keras.layers.MaxPooling2D(pool_size=3, strides=2, padding="same")(x)
 
-    X_val, Y_val = val_data
-    X_test, Y_test = test_data
-
-    val_data_gen = ImageDataGenerator()  
-
-    val_generator = val_data_gen.flow(
-        X_val,
-        Y_val,
-        batch_size=32,
-        shuffle=False
-    )
-
-
-    optimizer = keras.optimizers.Adam(learning_rate=0.001)
-
-    # =========================
-    # MODEL DEFINITION
-    # =========================
-    model = keras.models.Sequential()
-
-    # Initial convolution block (as in original ResNet)
-    model.add(
-        keras.layers.Conv2D(
-            filters=64,
-            kernel_size=7,
-            strides=2,
-            padding="same",
-            use_bias=False,
-            input_shape=(224, 224, 3)
-        )
-    )
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Activation("relu"))
-    model.add(keras.layers.MaxPooling2D(pool_size=3, strides=2, padding="same"))
-
-    # =========================
-    # RESIDUAL BLOCK STACK
-    # ResNet-34 style: 3-4-6-3
-    # =========================
-    prev_filters = 64
-
-    Res_config = [
-    (64, 3),
-    (128, 4),
-    (256, 6),
-    (512, 3),
+    # ResNet-34 configuration
+    res_config = [
+        (64, 3),
+        (128, 4),
+        (256, 6),
+        (512, 3),
     ]
-    
-    for filters, blocks in Res_config:
-        for block in range(blocks):
-            strides = 2 if block == 0 and filters != prev_filters else 1
-            model.add(ResidualBlock(filters, strides=strides))
+
+    prev_filters = 64
+    for filters, blocks in res_config:
+        for block_idx in range(blocks):
+            strides = 2 if block_idx == 0 and filters != prev_filters else 1
+            x = ResidualBlock(filters, strides=strides)(x)
             prev_filters = filters
 
-    # =========================
-    # CLASSIFICATION HEAD
-    # =========================
-    model.add(keras.layers.GlobalAveragePooling2D())
-    model.add(keras.layers.Dense(101, activation="softmax"))
+    # Classification head
+    x = keras.layers.GlobalAveragePooling2D()(x)
+    outputs = keras.layers.Dense(num_classes, activation="softmax")(x)
 
-    # =========================
-    # COMPILATION
-    # =========================
-    model.compile(
-        optimizer=optimizer,
-        loss="categorical_crossentropy",
-        metrics=["accuracy"]
+    return keras.Model(inputs, outputs, name="Custom_ResNet_Steel")
+
+
+# ============================================================
+# Main Execution
+# ============================================================
+if __name__ == "__main__":
+    logging.info("Initializing data pipeline...")
+
+    pipeline = DataPipeline(
+        ZIP_PATH,
+        EXTRACT_PATH,
+        img_size=IMG_SIZE,
+        batch_size=BATCH_SIZE
     )
+    train_data, val_data, test_data = pipeline.running_engine()
 
-    # =========================
-    # TRAINING
-    # =========================
+    # --------------------------------------------------------
+    # Model initialization
+    # --------------------------------------------------------
+    if os.path.exists(MODEL_PATH):
+        logging.info(f"Loading existing model from {MODEL_PATH}...")
+        model = keras.models.load_model(
+            MODEL_PATH,
+            custom_objects={"ResidualBlock": ResidualBlock}
+        )
+    else:
+        logging.info("Creating new Custom ResNet model...")
+        model = build_custom_resnet(
+            input_shape=(*IMG_SIZE, 3),
+            num_classes=NUM_CLASSES
+        )
+        model.compile(
+            optimizer=keras.optimizers.Adam(learning_rate=0.001),
+            loss="categorical_crossentropy",
+            metrics=["accuracy"]
+        )
+
+    # --------------------------------------------------------
+    # Callbacks (Production-Ready)
+    # --------------------------------------------------------
+    callbacks = [
+        keras.callbacks.ModelCheckpoint(
+            BEST_MODEL_PATH,
+            monitor="val_accuracy",
+            save_best_only=True,
+            verbose=1
+        ),
+        keras.callbacks.EarlyStopping(
+            monitor="val_loss",
+            patience=5,
+            restore_best_weights=True
+        )
+    ]
+
+    # --------------------------------------------------------
+    # Training
+    # --------------------------------------------------------
+    logging.info("Starting training...")
     history = model.fit(
-        train_generator,
-        epochs=10,
-        validation_data=val_generator 
+        train_data,
+        epochs=EPOCHS,
+        validation_data=val_data,
+        callbacks=callbacks
     )
 
-    # =========================
-    # EVALUATION
-    # =========================
-    loss, accuracy = model.evaluate(X_test, Y_test)
-    print(f"Loss: {loss:.4f}, Accuracy: {accuracy:.4f}")
+    # --------------------------------------------------------
+    # Evaluation
+    # --------------------------------------------------------
+    logging.info("Evaluating on test set...")
+    loss, accuracy = model.evaluate(test_data)
+    logging.info(f"Test Loss: {loss:.4f}, Test Accuracy: {accuracy:.4f}")
 
-    model.summary()
-    model.save(model_path)
+    # --------------------------------------------------------
+    # Save final model
+    # --------------------------------------------------------
+    os.makedirs("models", exist_ok=True)
+    model.save(MODEL_PATH)
+    logging.info(f"Final model saved to {MODEL_PATH}")
 
-    # =========================
-    # LEARNING CURVES
-    # =========================
-    fig, ax1 = plt.subplots()
+    # --------------------------------------------------------
+    # Visualization
+    # --------------------------------------------------------
+    fig, ax1 = plt.subplots(figsize=(10, 6))
 
-    color = 'tab:blue'
-    ax1.set_xlabel('Epoch')
-    ax1.set_ylabel('Accuracy', color=color)
-    ax1.plot(history.history["accuracy"], label="Train Acc", color='tab:blue')
-    ax1.plot(history.history["val_accuracy"], label="Val Acc", color='tab:cyan')
-    ax1.tick_params(axis='y', labelcolor=color)
+    ax1.set_xlabel("Epoch")
+    ax1.set_ylabel("Accuracy", color="tab:blue")
+    ax1.plot(history.history["accuracy"], label="Train Acc", color="tab:blue", linewidth=2)
+    ax1.plot(history.history["val_accuracy"], label="Val Acc", color="tab:cyan", linestyle="--")
+    ax1.tick_params(axis="y", labelcolor="tab:blue")
 
-    ax2 = ax1.twinx()  
-    color = 'tab:red'
-    ax2.set_ylabel('Loss', color=color)
-    ax2.plot(history.history["loss"], label="Train Loss", color='tab:red')
-    ax2.plot(history.history["val_loss"], label="Val Loss", color='tab:orange')
-    ax2.tick_params(axis='y', labelcolor=color)
+    ax2 = ax1.twinx()
+    ax2.set_ylabel("Loss", color="tab:red")
+    ax2.plot(history.history["loss"], label="Train Loss", color="tab:red", alpha=0.5)
+    ax2.plot(history.history["val_loss"], label="Val Loss", color="tab:orange", linestyle="--")
+    ax2.tick_params(axis="y", labelcolor="tab:red")
 
-    fig.tight_layout()
-    plt.title("Learning Curve – ResNet50 Baseline")
-    fig.legend(loc="upper right", bbox_to_anchor=(1,1), bbox_transform=ax1.transAxes)
+    plt.title("Steel Defect Detection: Custom ResNet Training History")
+    fig.legend(loc="upper right", bbox_to_anchor=(0.9, 0.9))
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
     plt.show()
