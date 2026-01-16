@@ -79,9 +79,12 @@ This model represents a deep-dive into the architecture's mechanics. Instead of 
 
 The architecture is built upon a custom ResidualBlock component. The implementation focuses on the mathematical foundation of skip connections:
 
-1. The Main Path ($F(x)$): Consists of a series of $3 \times 3$ and $1 \times 1$ Convolutional layers, Batch Normalization, and ReLU activations.
+1. The Main Path (F(x)$: Consists of a series of $3 \times 3$ and $1 \times 1$ Convolutional layers, Batch Normalization, and ReLU activations.
+
 2. The Skip Connection (Identity): A parallel path that carries the original input $x$.
+   
 3. Projection Shortcut: A crucial technical detail in our script. When spatial dimensions decrease (stride $> 1$), we apply a $1 \times 1$ convolution to the shortcut path to ensure the tensors match for the final addition.
+   
 4. Integration: The final output is calculated as $y = \text{ReLU}(F(x) + \text{Shortcut}(x))$.
 
 
