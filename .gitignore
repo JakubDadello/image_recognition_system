@@ -1,7 +1,23 @@
+# Python
 __pycache__/
-*.pyc
-data/kaggle_data/**
-data/dataset.zip
-!data/.gitkeep
-src/*.h5
+*.py[cod]
 
+# Data and Datasets
+data/dataset.zip
+data/steel_data/
+data/kaggle_data/
+!data/.gitkeep
+
+# Models and Weights
+models/*.h5
+models/*.keras
+*.h5
+
+# Visualizations
+reports/*.png
+
+# Environment and IDE
+.ipynb_checkpoints/
+venv/
+.vscode/
+.env
