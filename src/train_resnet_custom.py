@@ -27,7 +27,7 @@ np.random.seed(SEED)
 # Configuration
 # ------------------------------------------------------------
 MODEL_PATH = "models/resnet_custom.keras"
-BEST_MODEL_PATH = "models/resnet_custom_best.h5"
+BEST_MODEL_PATH = "models/resnet_custom_best.keras"
 PLOT_PATH = "reports/history_resnet_custom.png" 
 
 ZIP_PATH = "data/dataset.zip"
