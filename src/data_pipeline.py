@@ -30,8 +30,12 @@ class DataPipeline:
         self.img_size = img_size
         self.batch_size = batch_size
         self.class_names = [
-            "crazing", "inclusion", "patches",
-            "pitted-surface", "rolled-in-scale", "scratches"
+            "crazing", 
+            "inclusion", 
+            "patches", 
+            "pitted_surface", 
+            "rolled_in_scale", 
+            "scratches"
         ]
 
     # ---------------------------------------------------------
