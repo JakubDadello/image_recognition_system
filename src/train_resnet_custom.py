@@ -26,15 +26,16 @@ np.random.seed(SEED)
 # ------------------------------------------------------------
 # Configuration
 # ------------------------------------------------------------
-MODEL_PATH = "models/steel_resnet_custom.h5"
-BEST_MODEL_PATH = "models/steel_resnet_best.h5"
+MODEL_PATH = "models/resnet_custom.h5"
+BEST_MODEL_PATH = "models/resnet_custom_best.h5"
+PLOT_PATH = "reports/history_resnet_custom.png" 
 
 ZIP_PATH = "data/dataset.zip"
 EXTRACT_PATH = "data/steel_data"
 
 IMG_SIZE = (200, 200)
 BATCH_SIZE = 32
-EPOCHS = 20
+EPOCHS = 50
 NUM_CLASSES = 6
 
 
@@ -217,8 +218,14 @@ if __name__ == "__main__":
     ax2.plot(history.history["val_loss"], label="Val Loss", color="tab:orange", linestyle="--")
     ax2.tick_params(axis="y", labelcolor="tab:red")
 
+    os.makedirs("reports", exist_ok=True)
+
     plt.title("Steel Defect Detection: Custom ResNet Training History")
     fig.legend(loc="upper right", bbox_to_anchor=(0.9, 0.9))
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
+ 
+    plt.savefig(PLOT_PATH)
+    logging.info(f"Plot saved to {PLOT_PATH}")
+
     plt.show()
