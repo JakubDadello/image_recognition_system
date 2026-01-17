@@ -40,11 +40,11 @@ The dataset contains 1,800 grayscale images categorized into six distinct types 
 
 3. Split Strategy: The dataset follows a predefined split to ensure benchmark consistency:
 
-- Training: 85% (2352 images)
+- Training: 85% (2322 images)
 
 - Validation: 11% (295 images)
 
-- Testing: 4% (113 images)
+- Testing: 4% (143 images)
 
 # Data Preparation
 To ensure high model performance and robustness, a custom automated pipeline was developed.
