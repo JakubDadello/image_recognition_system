@@ -91,10 +91,10 @@ The architecture is built upon a custom ResidualBlock component. The implementat
 
 ###  Model 1: ResNet-50 (Transfer Learning)
 
-![ResNet](/reports/history_resnet50_pretrained.png)
+![ResNet50 pretrained](/reports/history_resnet50_pretrained.png)
 
-
-
+### Model 2: Custom ResNet (Built from Scratch)
+![ResNet custom](/reports/history_resnet_custom.png)
 
 
 
