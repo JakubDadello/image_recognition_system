@@ -92,11 +92,36 @@ The architecture is built upon a custom ResidualBlock component. The implementat
 ###  Model 1: ResNet-50 (Transfer Learning)
 
 ![ResNet50 pretrained](/reports/history_resnet50_pretrained.png)
+1. Behavior: the ResNet-50 model (pre-trained on ImageNet) showed much smoother and more professional convergence over 20 epochs.
+
+2. Metrics: There was a clear convergence between training and validation accuracy. Most importantly, the loss functions (both training and validation) showed a systematic and consistent decline.
+
+3. Conclusion: Leveraging pre-trained weights allowed the model to utilize low-level feature detectors (edges, textures) already learned from millions of images. This resulted in a far more reliable and "production-ready" model compared to the custom approach.
+
 
 ### Model 2: Custom ResNet (Built from Scratch)
 ![ResNet custom](/reports/history_resnet_custom.png)
+1. Behavior:In contrast,  The custom model exhibited significant instability and signs of severe overfitting.
 
+2. Metrics: While training accuracy remained deceptively high (constantly above 80%), the validation accuracy was highly volatile, fluctuating erratically between 40% and 60%.
 
+3. Conclusion: This "chaos" in validation metrics suggests that the custom architecture struggled to find a stable local minimum, likely due to the complexity of the steel defect patterns relative to the starting weights.
 
+### Final Selection
+Based on the stability of the loss curves and the reliability of the validation metrics, the ResNet-50 Transfer Learning model was selected for the final deployment phase. It directly supports the business goal of Accuracy, as its predictions are far more stable and less prone to the "randomness" observed in the custom model.
+
+# Deployment
+### Model Selection & Rationale
+The ResNet-50 Transfer Learning model was selected for production deployment. Unlike the custom implementation, this model demonstrated superior stability in loss reduction and consistent validation metrics. This choice directly supports the primary business objective: Accuracy. By minimizing the "randomness" and volatility observed in earlier iterations, we ensure a reliable automated inspection process that reduces "false passes" of defective material.
+
+### Integration with Production Lines
+The selected model is designed to be integrated with high-speed industrial cameras. The ResNet-50 architecture, while deeper than our custom version, remains efficient enough for sequential image processing, providing near-instant feedback to the quality control system.
+
+### Quality Control Workflow
+1. Confidence-Based Filtering: The system flags defects based on a probability threshold. Clear defects are categorized automatically, while low-confidence cases are flagged for human review.
+2. Operational Efficiency: This "Human-in-the-loop" approach achieves the Efficiency goal by drastically reducing the manual workload, allowing inspectors to focus only on complex or ambiguous cases.
+
+### Scalability and Edge Computing
+To meet the Scalability objective, the model is prepared for deployment on Edge AI devices (e.g., NVIDIA Jetson). Processing data locally at the production site eliminates the latency and bandwidth issues associated with cloud computing, ensuring that the automated quality control keeps pace with the physical speed of the steel rolling process.
 
 
