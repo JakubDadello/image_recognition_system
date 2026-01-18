@@ -16,7 +16,7 @@ Scalability: Create a model that can be deployed on edge devices near the produc
 # Data Understanding
 Dataset: NEU Surface Defect Database.
 
-The dataset contains 1,800 grayscale images categorized into six distinct types of surface defects. Each class represents a specific metallurgical or production-related issue.
+The dataset contains 2760 grayscale images categorized into six distinct types of surface defects. Each class represents a specific metallurgical or production-related issue.
 
 ### Classes of Interest:
 
