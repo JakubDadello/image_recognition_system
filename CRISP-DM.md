@@ -87,6 +87,11 @@ The architecture is built upon a custom ResidualBlock component. The implementat
    
 4. Integration: The final output is calculated as $y = \text{ReLU}(F(x) + \text{Shortcut}(x))$.
 
+# Evaluation 
+
+###  Model 1: ResNet-50 (Transfer Learning)
+
+![ResNet](/reports/history_resnet50_pretrained.png)
 
 
 
