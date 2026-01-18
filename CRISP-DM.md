@@ -103,7 +103,7 @@ The architecture is built upon a custom ResidualBlock component. The implementat
 ![ResNet custom](/reports/history_resnet_custom.png)
 1. Behavior:In contrast,  The custom model exhibited significant instability and signs of severe overfitting.
 
-2. Metrics: While training accuracy remained deceptively high (constantly above 80%), the validation accuracy was highly volatile, fluctuating erratically between 40% and 60%.
+2. Metrics: While training accuracy remained deceptively high (constantly above 80%), the validation accuracy was highly volatile, fluctuating erratically between 10% and 60%.
 
 3. Conclusion: This "chaos" in validation metrics suggests that the custom architecture struggled to find a stable local minimum, likely due to the complexity of the steel defect patterns relative to the starting weights.
 
