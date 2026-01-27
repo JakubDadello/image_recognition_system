@@ -1,71 +1,65 @@
-import tensorflow as tf
 import numpy as np
-import io
-from fastapi import FastAPI, File, UploadFile, HTTPException
-from PIL import Image
+import bentoml
+from bentoml.io import Image, JSON
+from PIL import Image as PILImage
+import logging
 
-app = FastAPI(
-    title="Industrial Steel Defect Detection API",
-    description="High-performance inference API for NEU Surface Defect Database using Custom ResNet and Transfer Learning models.",
-    version="1.0.0"
-)
+# --- Setup Logging ---
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# --- Model Loading Strategy ---
-# Professional Note: Using absolute-like paths or env variables is preferred in Docker
+# --- Model Configuration ---
+# CLASSES are defined here for global access
+CLASSES = ["crazing", "inclusion", "patches", "pitted_surface", "rolled-in_scale", "scratches"]
+
+# --- Initialize BentoML Runner ---
+# This is the industry standard: separating the API logic from model inference
 try:
-    # We load both models to allow potential A/B testing or ensemble logic
-    MODEL_CUSTOM_PATH = "models/resnet_custom.keras"
-    MODEL_TL_PATH = "models/resnet50_pretrained.keras"
-    
-    model_custom = tf.keras.models.load_model(MODEL_CUSTOM_PATH)
-    # model_tl = tf.keras.models.load_model(MODEL_TL_PATH) # Optional: Load TL model if needed
-    
-    CLASSES = ["crazing", "inclusion", "patches", "pitted_surface", "rolled-in_scale", "scratches"]
+    # We fetch the model from the local BentoML store
+    model_runner = bentoml.tensorflow.get("resnet_custom_model:latest").to_runner()
 except Exception as e:
-    print(f"Critical Error: Failed to load models. {e}")
+    logger.error(f"Failed to initialize model runner: {e}")
+    raise
 
-@app.post("/predict", tags=["Inference"])
-async def predict_defect(file: UploadFile = File(...)):
-    """
-    Asynchronous endpoint to perform inference on industrial steel surface images.
-    Input: Multipart form-data image file.
-    Output: JSON containing predicted class and softmax confidence score.
-    """
-    
-    # 1. Validate file extension to prevent processing non-image data
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Invalid file type. Please upload an image.")
+# Define the service and its runners
+service = bentoml.Service("industrial_defect_detector", runners=[model_runner])
 
+@service.api(input=Image(), output=JSON())
+async def predict_defect(img: PILImage.Image) -> dict:
+    """
+    Asynchronously processes the uploaded image and returns defect classification.
+    """
     try:
-        # 2. Non-blocking read of the uploaded byte stream
-        data = await file.read()
-        image = Image.open(io.BytesIO(data)).convert("RGB")
+        # 1. Preprocessing: Standardize image size and color space
+        # Note the double parentheses in resize((224, 224))
+        img = img.convert("RGB").resize((224, 224))
+        
+        # 2. Normalization: Scale pixels to [0, 1] range as expected by ResNet
+        img_array = np.array(img) / 255.0
+        
+        # 3. Reshaping: Add batch dimension (1, 224, 224, 3)
+        img_array = np.expand_dims(img_array, axis=0).astype(np.float32)
 
-        # 3. Preprocessing Pipeline
-        # Note: resize() requires a tuple (width, height). 
-        # Normalization (1/255) must match the training-time preprocessing.
-        image = image.resize((224, 224)) 
-        img_array = np.array(image) / 255.0
-        img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
+        # 4. Inference: Run the prediction using the dedicated runner
+        preds = await model_runner.predict.async_run(img_array)
+        
+        # 5. Post-processing: Extract class name and confidence score
+        class_index = int(np.argmax(preds[0]))
+        confidence = float(np.max(preds[0]))
 
-        # 4. Model Inference
-        # In a remote-ready setup, consider using model.predict_on_batch for single samples
-        predictions = model_custom.predict(img_array, verbose=0)
-        class_index = np.argmax(predictions[0])
-        confidence = float(np.max(predictions[0]))
+        logger.info(f"Prediction successful: {CLASSES[class_index]} ({confidence:.2f})")
 
-        # 5. Result Serialization
         return {
             "defect_type": CLASSES[class_index],
             "confidence": round(confidence, 4),
-            "model_version": "custom_resnet_v1"
+            "status": "success"
         }
 
     except Exception as e:
-        # High-level error logging for production monitoring
-        raise HTTPException(status_code=500, detail=f"Inference Error: {str(e)}")
+        logger.error(f"Inference error: {str(e)}")
+        return {"status": "error", "message": str(e)}
 
-@app.get("/health", tags=["System"])
-async def health_check():
-    """Service health check for Docker/K8s liveness probes."""
-    return {"status": "healthy", "model_loaded": model_custom is not None}
+@service.api(input=JSON(), output=JSON())
+def health_check(input_data: dict) -> dict:
+    """Standard health check endpoint for monitoring systems."""
+    return {"status": "healthy", "service": "industrial-ai"}
