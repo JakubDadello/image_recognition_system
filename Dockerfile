@@ -16,16 +16,16 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt
 
 # Install dependencies
-RUN pip install --no-caceh-dir requirements.txt
+RUN pip install --no-cache-dir requirements.txt
 
 # Copy the rest of the application
 COPY . .
 
-# Expose port 8000 for FastAPI
-EXPOSE 8000
+# Expose port 3000 for BentoML
+EXPOSE 3000
 
 # Start the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["bentoml", "serve", "app.service:industrial-ai_service", "--reload", "--port", "3000"]
 
 
 
