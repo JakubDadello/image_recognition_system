@@ -63,3 +63,6 @@ async def predict_defect(img: PILImage.Image) -> dict:
 def health_check(input_data: dict) -> dict:
     """Standard health check endpoint for monitoring systems."""
     return {"status": "healthy", "service": "industrial-ai"}
+
+
+
