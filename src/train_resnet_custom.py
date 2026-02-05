@@ -52,7 +52,7 @@ class ResidualBlock(keras.layers.Layer):
 
         self.activation = keras.layers.Activation(activation)
 
-        # Main convolutional path
+        # --- Main convolutional path ---
         self.main_layers = keras.Sequential([
             keras.layers.Conv2D(
                 filters, kernel_size=3, strides=strides,
@@ -67,7 +67,7 @@ class ResidualBlock(keras.layers.Layer):
             keras.layers.BatchNormalization()
         ])
 
-        # Skip connection (projection shortcut if dimensions change)
+        # --- Skip connection ---
         if strides > 1:
             self.skip_layers = keras.Sequential([
                 keras.layers.Conv2D(
@@ -94,7 +94,7 @@ def build_custom_resnet(input_shape, num_classes):
     """
     inputs = keras.Input(shape=input_shape)
 
-    # Stem
+    # --- Stem ---
     x = keras.layers.Conv2D(
         64, kernel_size=7, strides=2, padding="same", use_bias=False
     )(inputs)
@@ -102,7 +102,7 @@ def build_custom_resnet(input_shape, num_classes):
     x = keras.layers.Activation("relu")(x)
     x = keras.layers.MaxPooling2D(pool_size=3, strides=2, padding="same")(x)
     
-    # ResNet-34 configuration
+    # --- ResNet-34 configuration ---
     res_config = [
         (64, 3),
         (128, 4),
@@ -117,7 +117,7 @@ def build_custom_resnet(input_shape, num_classes):
             x = ResidualBlock(filters, strides=strides)(x)
             prev_filters = filters
 
-    # Classification head
+    # --- Classification head ---
     x = keras.layers.GlobalAveragePooling2D()(x)
     x = keras.layers.Dropout(0.5)(x)
     outputs = keras.layers.Dense(num_classes, activation="softmax")(x)
