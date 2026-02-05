@@ -21,7 +21,7 @@ except Exception as e:
     logger.error(f"Failed to initialize model runner: {e}")
     raise
 
-# Define the service and its runners
+# --- Define the service and its runners ---
 service = bentoml.Service("industrial_defect_detector", runners=[model_runner])
 
 @service.api(input=Image(), output=JSON())
