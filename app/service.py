@@ -44,7 +44,7 @@ async def predict_defect(img: PILImage.Image) -> dict:
         img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
         
         # Optional: Noise reduction using Gaussian Blur
-        # img_bgr = cv2.GaussianBlur(img_bgr, (3, 3), 0)
+        img_bgr = cv2.GaussianBlur(img_bgr, (3, 3), 0)
 
         # Convert back to RGB and resize for the model input requirements
         img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
