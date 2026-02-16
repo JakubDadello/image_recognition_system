@@ -93,7 +93,7 @@ if __name__ == "__main__":
             num_classes=NUM_CLASSES
         )
         model.compile(
-            optimizer=keras.optimizers.Adam(learning_rate=0.001),
+            optimizer=keras.optimizers.Adam(learning_rate=1e-4),
             loss="categorical_crossentropy",
             metrics=["accuracy"]
         )
