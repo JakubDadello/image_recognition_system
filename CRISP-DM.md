@@ -98,6 +98,8 @@ The architecture is built upon a custom ResidualBlock component. The implementat
 
 3. Conclusion: Leveraging pre-trained weights allowed the model to utilize low-level feature detectors (edges, textures) already learned from millions of images. This resulted in a far more reliable and "production-ready" model compared to the custom approach.
 
+### 2026-02-17 10:09:12,677 - INFO - Test Loss: 0.0177, Test Accuracy: 0.9952
+
 
 ### Model 2: Custom ResNet (Built from Scratch)
 ![ResNet custom](/reports/history_resnet_custom.png)
