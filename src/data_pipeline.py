@@ -69,27 +69,23 @@ class DataPipeline:
     def organize_flat_structure(self):
         logging.info("Organizing images into class-specific folders...")
 
-        for split in ["train", "valid", "test"]:
-            split_path = os.path.join(self.extract_to, split)
+        train_path = os.path.join(self.extract_to, "train")
 
-            if not os.path.exists(split_path):
-                logging.warning(f"Split folder missing: {split}")
+        if not os.path.exists(train_path):
+            raise RuntimeError("Training folder missing in dataset.")
+        
+        for filename in os.listdir(train_path):
+            file_path = os.path.join(train_path, filename)
+
+            if os.path.isdir(file_path):
                 continue
 
-            for filename in os.listdir(split_path):
-                file_path = os.path.join(split_path, filename)
-
-                # Skip directories
-                if os.path.isdir(file_path):
-                    continue
-
-                # Move file into correct class folder
-                for class_name in self.class_names:
-                    if filename.lower().startswith(class_name.lower()):
-                        target_dir = os.path.join(split_path, class_name)
-                        os.makedirs(target_dir, exist_ok=True)
-                        shutil.move(file_path, os.path.join(target_dir, filename))
-                        break
+            for class_name in self.class_names:
+                if filename.lower().startswith(class_name.lower()):
+                    target_dir = os.path.join(train_path, class_name)
+                    os.makedirs(target_dir, exist_ok=True)
+                    shutil.move(file_path, os.path.join(target_dir, filename))
+                    break
 
         logging.info("Organization step completed.")
 
@@ -100,58 +96,45 @@ class DataPipeline:
         logging.info("Creating TensorFlow datasets...")
 
         train_path = os.path.join(self.extract_to, "train")
-        val_path = os.path.join(self.extract_to, "valid")
-        test_path = os.path.join(self.extract_to, "test")
 
-        # --- Minimal validation ---
-        if not os.path.exists(train_path):
-            raise RuntimeError("Training folder is missing. Dataset not prepared correctly.")
-
-        # --- Load datasets ---
-        train_data = tf.keras.utils.image_dataset_from_directory(
-            train_path, image_size=self.img_size, batch_size=self.batch_size,
-            label_mode="categorical"
+        full_dataset = tf.keras.utils.image_dataset_from_directory(
+            train_path,
+            batch_size = self.batch_size,
+            image_size = self.img_size,
+            label_mode = "categorical",
+            shuffle=True,
+            seed=123,
         )
 
-        val_data = tf.keras.utils.image_dataset_from_directory(
-            val_path, image_size=self.img_size, batch_size=self.batch_size,
-            label_mode="categorical",
-            validation_split=0.5, 
-            subset="training", 
-            seed=123 
-        )
+        # --- Compute sizes --- 
+        dataset_size = full_dataset.cardinality().numpy() 
+        val_size = dataset_size // 10 
+        test_size = dataset_size // 10 
+        train_size = dataset_size - val_size - test_size 
 
-        test_data = tf.keras.utils.image_dataset_from_directory(
-            val_path, image_size=self.img_size, batch_size=self.batch_size,
-            label_mode="categorical",
-            validation_split=0.5,
-            subset="validation", 
-            seed=123
-        )
+        # --- Split dataset ---
+        train_data = full_dataset.take(train_size)
+        remain_data = full_dataset.skip(train_size)
+        val_data = remain_data.take(val_size)
+        test_data = remain_data.skip(val_size)
 
-        # --- Preprocessing layers ---
-        augmentation = tf.keras.Sequential([
-            tf.keras.layers.RandomFlip("horizontal_and_vertical"),
-            tf.keras.layers.RandomRotation(0.2)
-        ])
-
-        # --- Shuffle & augmentation for training ---
-        train_data = train_data.shuffle(1000)
+        # Augmentation 
+        augmentation = tf.keras.Sequential([ 
+            tf.keras.layers.RandomFlip("horizontal_and_vertical"), 
+            tf.keras.layers.RandomRotation(0.2) ]) 
+        
         train_data = train_data.map(
-            lambda x, y: (augmentation(x, training=True), y),
-            num_parallel_calls=tf.data.AUTOTUNE
-        )
+            lambda x, y: (augmentation(x, training=True), y), 
+            num_parallel_calls=tf.data.AUTOTUNE ) 
 
-        # --- Cache validation & test for performance ---
-        val_data = val_data.cache()
-        test_data = test_data.cache()
-
-        # --- Prefetch for performance ---
-        return (
-            train_data.prefetch(tf.data.AUTOTUNE),
-            val_data.prefetch(tf.data.AUTOTUNE),
-            test_data.prefetch(tf.data.AUTOTUNE)
-        )
+        # Cache + prefetch 
+        train_data = train_data.prefetch(tf.data.AUTOTUNE) 
+        val_data = val_data.cache().prefetch(tf.data.AUTOTUNE) 
+        test_data = test_data.cache().prefetch(tf.data.AUTOTUNE) 
+        
+        logging.info("Datasets created successfully.") 
+        
+        return train_data, val_data, test_data
 
 # ---------------------------------------------------------
 # Example usage
