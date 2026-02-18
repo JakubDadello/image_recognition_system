@@ -27,10 +27,10 @@ def build_production_model():
     """
     inputs = keras.Input(shape=(*IMG_SIZE, 3), name="input_pixels")
     
-    # Internal preprocessing - this was causing the 'Stack/Ellipsis' errors in .h5
+    # --- Internal preprocessing ---
     x = keras.applications.resnet50.preprocess_input(inputs)
     
-    # Pretrained Backbone
+    # --- Pretrained Backbone ---
     base_model = keras.applications.ResNet50(
         include_top=False, 
         weights=None, 
@@ -55,7 +55,6 @@ def migrate():
         model = build_production_model()
 
         # 3. Inject weights
-        # We use by_name=True to ensure weights map to the correct layers
         print(f"[*] Loading weights from: {WEIGHTS_PATH}...")
         if not os.path.exists(WEIGHTS_PATH):
             raise FileNotFoundError(f"Weights not found at {WEIGHTS_PATH}")
@@ -64,17 +63,14 @@ def migrate():
         print("[+] Weights successfully injected.")
 
         # 4. Intermediate Export (Fixes _DictWrapper & Keras 3 compatibility)
-        # Saving without an extension in Keras 3 creates a clean SavedModel folder
         if os.path.exists(EXPORT_DIR):
             shutil.rmtree(EXPORT_DIR)
         
         print(f"[*] Exporting clean graph using model.export() to: {EXPORT_DIR}...")
         
-        # W Keras 3 to jest zalecana metoda dla SavedModel (produkcja)
         model.export(EXPORT_DIR) 
 
-        # 4. BENTOML REGISTRATION
-        # 4. BENTOML REGISTRATION
+        # 4. BentoML Registration 
         print(f"[*] Reloading clean graph for BentoML registration...")
         
         reloaded_model = tf.saved_model.load(EXPORT_DIR)
@@ -90,9 +86,6 @@ def migrate():
                 "classes": NUM_CLASSES
             }
         )
-
-        # Optional: Cleanup
-        # shutil.rmtree(EXPORT_DIR)
 
     except Exception as e:
         print(f"\n[!] CRITICAL ERROR: {str(e)}")
