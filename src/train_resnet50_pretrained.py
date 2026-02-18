@@ -36,7 +36,7 @@ EXTRACT_PATH = "data/steel_data"
 
 IMG_SIZE = (200, 200)
 BATCH_SIZE = 32
-EPOCHS = 1
+EPOCHS = 10
 NUM_CLASSES = 6
 
 
