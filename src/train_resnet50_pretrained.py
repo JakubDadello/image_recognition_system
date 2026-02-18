@@ -26,9 +26,9 @@ np.random.seed(SEED)
 # ------------------------------------------------------------
 # Configuration
 # ------------------------------------------------------------
-MODEL_PATH = "models/resnet50_pretrained.h5"
-BEST_MODEL_PATH = "models/resnet50_pretrained_best.h5"
-WEIGHTS_PATH = "models/steel_model_weights.h5"
+MODEL_PATH = "models/resnet50_pretrained.keras"
+BEST_MODEL_PATH = "models/resnet50_pretrained_best.keras"
+WEIGHTS_PATH = "models/steel_model_weights.weights.h5"
 PLOT_PATH = "reports/history_resnet50_pretrained.png" 
 
 ZIP_PATH = "data/dataset.zip"
@@ -36,7 +36,7 @@ EXTRACT_PATH = "data/steel_data"
 
 IMG_SIZE = (200, 200)
 BATCH_SIZE = 32
-EPOCHS = 10
+EPOCHS = 1
 NUM_CLASSES = 6
 
 
@@ -113,7 +113,7 @@ if __name__ == "__main__":
     else:
         logging.info("Creating new ResNet-50 transfer learning model...")
         model = build_resnet50(
-            input_shape=(*IMG_SIZE, 3),
+            input_shape=(200, 200, 3),
             num_classes=NUM_CLASSES
         )
         model.compile(
