@@ -8,7 +8,12 @@ MODEL_PATH =  "./temp_production_model/"
 CLASSES = ["crazing", "inclusion", "patches", "pitted_surface", "rolled-in_scale", "scratches"]
 IMG_SIZE = (200, 200)
 
-model = tf.keras.models.load_model(MODEL_PATH)
+model = tf.keras.Sequential([
+    tf.keras.layers.TFSMLayer('./temp_production_model/', call_endpoint='serving_default')
+])
+
+# Keras 3 version (multisystem Keras API) 
+# model = tf.keras.models.load_model(MODEL_PATH)
 
 def predictions (img: PILImage.Image):
 
@@ -22,14 +27,16 @@ def predictions (img: PILImage.Image):
     img_res = cv2.resize(img_rgb, IMG_SIZE )
 
     # 3. Input Preparation
-    img_array = img_res.astype(np.float32)/255.0
+    img_array = img_res.astype(np.float32)
     img_array = np.expand_dims(img_array, axis=0)
 
     # 4. Model Inference
     preds = model.predict(img_array)
 
     # 5. Output Post-processing
-    return {CLASSES[i]: float(preds[0][i]) for i in range(len(CLASSES))}
+    probabilities = list(preds.values())[0][0]
+
+    return {CLASSES[i]: float(probabilities[i]) for i in range(len(CLASSES))}
 
 demo = gr.Interface(
     fn=predictions, 
