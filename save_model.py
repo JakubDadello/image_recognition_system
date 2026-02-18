@@ -2,19 +2,20 @@ import os
 import shutil
 import pathlib
 import tensorflow as tf
+import bentoml
 from tensorflow import keras
 
 # -----------------------------------------------------------------------------
-# PRODUCTION MODEL MIGRATION SCRIPT (Keras 3 Native)
+# PRODUCTION MODEL MIGRATION SCRIPT (Keras 3 + BentoML)
 # Project: Steel Defect Detection - ResNet50 Transfer Learning
-# Goal: Convert legacy .h5 weights into a stable .keras bundle
+# Goal: Convert legacy .h5 weights into a clean BentoML SavedModel
 # -----------------------------------------------------------------------------
 
 # --- Configuration ---
 BASE_DIR = pathlib.Path(__file__).parent.absolute()
-WEIGHTS_PATH = os.path.join(BASE_DIR, "models", "resnet50_pretrained_best.h5")
-# We save to a single .keras file instead of a directory to avoid _DictWrapper errors
-EXPORT_FILE = os.path.join(BASE_DIR, "steel_defect_model_final.keras")
+WEIGHTS_PATH = os.path.join(BASE_DIR,"models", "resnet50_pretrained_best.h5")
+EXPORT_DIR = os.path.join(BASE_DIR, "temp_production_model")
+MODEL_NAME = "resnet50_steel_defect"
 
 IMG_SIZE = (200, 200)
 NUM_CLASSES = 6
@@ -26,11 +27,10 @@ def build_production_model():
     """
     inputs = keras.Input(shape=(*IMG_SIZE, 3), name="input_pixels")
     
-    # --- Internal preprocessing (ResNet50 specific) ---
+    # --- Internal preprocessing ---
     x = keras.applications.resnet50.preprocess_input(inputs)
     
     # --- Pretrained Backbone ---
-    # We use None for weights because we will load our custom .h5 weights later
     base_model = keras.applications.ResNet50(
         include_top=False, 
         weights=None, 
@@ -59,29 +59,33 @@ def migrate():
         if not os.path.exists(WEIGHTS_PATH):
             raise FileNotFoundError(f"Weights not found at {WEIGHTS_PATH}")
             
-        # Strategy: Load weights into the ResNet layer first to ensure backbone integrity
-        # Then load into the whole model for the top 'Dense' layers
-        try:
-            # Finding the resnet layer by its class or name
-            resnet_layer = model.get_layer("resnet50")
-            resnet_layer.load_weights(WEIGHTS_PATH, by_name=True)
-            print("[+] Backbone weights injected.")
-        except Exception as e:
-            print(f"[!] Warning: Could not target backbone directly: {e}")
-
         model.load_weights(WEIGHTS_PATH, by_name=True, skip_mismatch=True)
-        print("[+] Final weight injection complete.")
+        print("[+] Weights successfully injected.")
 
-        # 4. Save to Native Keras 3 format
-        # This avoids the SavedModel/BentoML serialization that triggers _DictWrapper errors
-        print(f"[*] Saving model to native Keras 3 format: {EXPORT_FILE}...")
+        # 4. Intermediate Export (Fixes _DictWrapper & Keras 3 compatibility)
+        if os.path.exists(EXPORT_DIR):
+            shutil.rmtree(EXPORT_DIR)
         
-        if os.path.exists(EXPORT_FILE):
-            os.remove(EXPORT_FILE)
-            
-        model.save(EXPORT_FILE)
+        print(f"[*] Exporting clean graph using model.export() to: {EXPORT_DIR}...")
+        
+        model.export(EXPORT_DIR) 
 
-        print(f"\n[+++] SUCCESS! Upload '{os.path.basename(EXPORT_FILE)}' to Hugging Face.")
+        # 5. BentoML Registration 
+        print(f"[*] Reloading clean graph for BentoML registration...")
+        
+        reloaded_model = tf.saved_model.load(EXPORT_DIR)
+
+        print(f"[*] Finalizing registration in BentoML Model Store...")
+        bento_model = bentoml.tensorflow.save_model(
+            MODEL_NAME,
+            reloaded_model, 
+            signatures={"__call__": {"batchable": True, "batch_dim": 0}},
+            metadata={
+                "training_src": "resnet50_pretrained_best.h5",
+                "input_shape": f"{IMG_SIZE}x3",
+                "classes": NUM_CLASSES
+            }
+        )
 
     except Exception as e:
         print(f"\n[!] CRITICAL ERROR: {str(e)}")
