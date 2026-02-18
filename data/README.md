@@ -9,6 +9,3 @@ This directory is intended to hold the project datasets. Due to file size limits
 ## Data Source
 The dataset used in this project is sourced from Roboflow:
 [Metallic Surface Defect Detector](https://universe.roboflow.com/sujitsa/metallic-surface-defect-detector/dataset/1)
-
-## Setup
-To run this project, please download the dataset from the link above, place the `dataset.zip` file in this folder, and the `DataPipeline` will handle the extraction and preprocessing.
