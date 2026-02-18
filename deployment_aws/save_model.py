@@ -5,15 +5,10 @@ import tensorflow as tf
 import bentoml
 from tensorflow import keras
 
-# -----------------------------------------------------------------------------
-# PRODUCTION MODEL MIGRATION SCRIPT (Keras 3 + BentoML)
-# Project: Steel Defect Detection - ResNet50 Transfer Learning
-# Goal: Convert legacy .h5 weights into a clean BentoML SavedModel
-# -----------------------------------------------------------------------------
-
 # --- Configuration ---
 BASE_DIR = pathlib.Path(__file__).parent.absolute()
-WEIGHTS_PATH = os.path.join(BASE_DIR,"models", "resnet50_pretrained_best.h5")
+# Pointer to your raw weights file
+WEIGHTS_PATH = os.path.join(BASE_DIR, "models", "steel_model_weights.h5") 
 EXPORT_DIR = os.path.join(BASE_DIR, "temp_production_model")
 MODEL_NAME = "resnet50_steel_defect"
 
@@ -27,10 +22,10 @@ def build_production_model():
     """
     inputs = keras.Input(shape=(*IMG_SIZE, 3), name="input_pixels")
     
-    # --- Internal preprocessing ---
+    # Internal preprocessing (crucial for production)
     x = keras.applications.resnet50.preprocess_input(inputs)
     
-    # --- Pretrained Backbone ---
+    # Pretrained Backbone (weights=None because we load our own)
     base_model = keras.applications.ResNet50(
         include_top=False, 
         weights=None, 
@@ -54,38 +49,42 @@ def migrate():
         print("[*] Building clean model architecture...")
         model = build_production_model()
 
-        # 3. Inject weights
-        print(f"[*] Loading weights from: {WEIGHTS_PATH}...")
+        # 3. Inject RAW weights only
+        # This is the "safe" part that bypasses Keras 3 metadata errors
+        print(f"[*] Loading raw weights from: {WEIGHTS_PATH}...")
         if not os.path.exists(WEIGHTS_PATH):
-            raise FileNotFoundError(f"Weights not found at {WEIGHTS_PATH}")
+            raise FileNotFoundError(f"Weights file not found at {WEIGHTS_PATH}")
             
-        model.load_weights(WEIGHTS_PATH, by_name=True, skip_mismatch=True)
-        print("[+] Weights successfully injected.")
+        model.load_weights(WEIGHTS_PATH)
+        print("[+] Weights successfully injected into the architecture.")
 
-        # 4. Intermediate Export (Fixes _DictWrapper & Keras 3 compatibility)
+        # 4. Export to SavedModel format (Standardized format for BentoML)
         if os.path.exists(EXPORT_DIR):
             shutil.rmtree(EXPORT_DIR)
         
-        print(f"[*] Exporting clean graph using model.export() to: {EXPORT_DIR}...")
-        
+        print(f"[*] Exporting clean graph to: {EXPORT_DIR}...")
+        # .export() creates a clean, framework-agnostic version of your model
         model.export(EXPORT_DIR) 
 
         # 5. BentoML Registration 
-        print(f"[*] Reloading clean graph for BentoML registration...")
+        print(f"[*] Registering in BentoML Model Store...")
         
+        # Load the newly exported clean SavedModel
         reloaded_model = tf.saved_model.load(EXPORT_DIR)
 
-        print(f"[*] Finalizing registration in BentoML Model Store...")
         bento_model = bentoml.tensorflow.save_model(
             MODEL_NAME,
             reloaded_model, 
-            signatures={"__call__": {"batchable": True, "batch_dim": 0}},
+            # Note: we use "serve" as the default signature for exported models
+            signatures={"serve": {"batchable": True, "batch_dim": 0}},
             metadata={
-                "training_src": "resnet50_pretrained_best.h5",
+                "source_weights": os.path.basename(WEIGHTS_PATH),
                 "input_shape": f"{IMG_SIZE}x3",
-                "classes": NUM_CLASSES
+                "classes": NUM_CLASSES,
+                "note": "Loaded from raw weights to ensure Keras 3 compatibility"
             }
         )
+        print(f"[+] SUCCESS: Model registered as {bento_model.tag}")
 
     except Exception as e:
         print(f"\n[!] CRITICAL ERROR: {str(e)}")
