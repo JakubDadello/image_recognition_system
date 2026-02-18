@@ -28,6 +28,7 @@ np.random.seed(SEED)
 # ------------------------------------------------------------
 MODEL_PATH = "models/resnet50_pretrained.h5"
 BEST_MODEL_PATH = "models/resnet50_pretrained_best.h5"
+WEIGHTS_PATH = "models/steel_model_weights.h5"
 PLOT_PATH = "reports/history_resnet50_pretrained.png" 
 
 ZIP_PATH = "data/dataset.zip"
@@ -161,6 +162,7 @@ if __name__ == "__main__":
     # --------------------------------------------------------
     os.makedirs("models", exist_ok=True)
     model.save(MODEL_PATH)
+    model.save_weights(WEIGHTS_PATH)
     logging.info(f"Final model saved to {MODEL_PATH}")
 
     # --------------------------------------------------------
