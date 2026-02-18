@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 
 # Folders
-temp_production_/
+temp_production_model/
 
 # Data and Datasets
 data/dataset.zip
