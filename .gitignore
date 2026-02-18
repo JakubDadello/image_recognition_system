@@ -12,6 +12,7 @@ data/kaggle_data/
 models/*.h5
 models/*.keras
 *.h5
+*.pb
 
 # Environment and IDE
 .ipynb_checkpoints/
