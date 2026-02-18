@@ -41,7 +41,7 @@ class IndustrialDefectService:
             img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
             img_res = cv2.resize(img_rgb, TARGET_IMG_SIZE)
 
-            # 3. Input Preparation (No manual /255.0)
+            # 3. Input Preparation
             img_array = img_res.astype(np.float32) 
             img_array = np.expand_dims(img_array, axis=0)
 
