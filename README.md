@@ -6,27 +6,6 @@ This project builds a complete deep‑learning pipeline for automated steel surf
 
 ## How to Run
 
-To run this project locally, you can use either Docker (recommended) or a standard Python environment.
-
-### Using Docker 
-* **Docker Compose:**
-  ```bash
-  docker-compose up --build
-
-* **Build the image:**
-  ```bash
-  docker build -t industrial-ai .
-* **Run the container:**
-  ```bash
-  docker run -p 8000:8000 industrial-ai
-
-### Using Python (Local Environment)
-* **Install requirements:**
-  ```bash
-  pip install -r requirements.txt
-* **Launch BentoML server:**
-  ```bash
-  bentoml serve app.service:industrial-ai_service --port 3000
   
 ## Repository Structure
 - `app` - production-ready deployment logic and API implementation (BentoML).
