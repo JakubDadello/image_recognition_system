@@ -5,7 +5,7 @@
 This project builds a complete deep‑learning pipeline for automated steel surface defect classification, covering data extraction, preprocessing, and model training. It compares a custom ResNet architecture with a fine‑tuned ResNet50 to evaluate the effectiveness of domain‑specific learning versus transfer learning in industrial quality‑control scenarios.
 
 ## How to Run
-
+Link to HuggingFace: https://huggingface.co/spaces/kejdixhug/steel_defect_detector
   
 ## Repository Structure
 - `app` - production-ready deployment logic and API implementation (BentoML).
